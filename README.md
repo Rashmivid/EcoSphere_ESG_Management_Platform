@@ -58,7 +58,20 @@ EcoSphere is a **production-grade ESG management platform** built for organizati
 - 🔔 **Notifications** — Real-time in-app alerts for badges, overdue compliance, and approvals.
 
 ---
+## 👥 Who Uses EcoSphere & Project Scope
 
+EcoSphere is designed for **entire organizations** — from executive directors to individual contributors. Every role has a dedicated access level with tailored views and permissions.
+
+| Role | Real-World Title | Key Responsibilities | Primary Pages |
+|---|---|---|---|
+| 🔴 **Admin** | Sustainability Director / ESG Officer | Configure org-wide ESG weights, create departments, set emission factors, create CSR missions & quests, view all reports, manage audit logs | Admin · Environmental · Game Arena · Intel Reports |
+| 🟠 **Department Head** | Team Lead / Floor Manager | Review & approve/reject employee CSR photo proofs, approve quest completions (awards XP), generate department reports | Social · Game Arena · Intel Reports · Dashboard |
+| 🟢 **Employee** | Any staff member | Log daily carbon usage, join CSR missions & upload photo proof, accept game quests, earn XP & badges, redeem rewards, track rank on leaderboard | Environmental · Social · Game Arena · Dashboard |
+| 🔵 **Auditor** | External Compliance Auditor | Read-only inspection of policies, compliance issues, acknowledgements, and the full immutable audit trail | Governance · Intel Reports |
+
+> 💡 **Monthly Cycle:** Admin sets targets → Employees log & participate → Heads approve evidence → Scores recalculate instantly → Leadership exports Intel Reports for board presentation → Auditors verify the audit trail.
+
+---
 ## 🎮 Feature Modules
 
 | Module | Page File | Description |
