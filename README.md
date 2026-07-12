@@ -26,6 +26,9 @@ A full-stack ESG (Environmental · Social · Governance) management platform wit
 </div>
 
 ---
+<img width="959" height="428" alt="Screenshot 2026-07-12 141805" src="https://github.com/user-attachments/assets/dabd6dac-4bf4-4215-9552-7f18c3dfabf1" />
+<img width="956" height="436" alt="Screenshot 2026-07-12 141733" src="https://github.com/user-attachments/assets/4cb58fa8-a5dc-4c88-be17-ce605a4b9f82" />
+
 
 ## 📋 Table of Contents
 
