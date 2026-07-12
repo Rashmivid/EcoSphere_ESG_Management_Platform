@@ -284,14 +284,6 @@ Startup check: flagged 0 overdue compliance issues.
 INFO:     Uvicorn running on http://127.0.0.1:8000
 ```
 
-| URL | Purpose |
-|---|---|
-| http://localhost:8000/docs | 🔥 Interactive Swagger API Docs |
-| http://localhost:8000/redoc | 📘 ReDoc API Reference |
-| http://localhost:8000/health | ❤️ Health Check |
-
----
-
 ### Terminal 2 — Frontend (React + Vite)
 
 ```powershell
@@ -335,20 +327,6 @@ Run the entire stack — backend + database + frontend — with a single command
 cd C:\ecosphere
 docker-compose up --build
 ```
-
-| Service | URL |
-|---|---|
-| FastAPI Backend | http://localhost:8000 |
-| API Docs | http://localhost:8000/docs |
-| React Frontend | http://localhost:5173 |
-
-To stop:
-```powershell
-docker-compose down
-```
-
----
-
 ## 👤 Demo Accounts
 
 The `seed.py` script creates these accounts automatically. On the **Login page**, click a **DEMO PLAYER** tile to auto-fill any credential:
@@ -641,12 +619,5 @@ Admin enables "Auto Emission Calculation" in Environmental Settings
 ---
 
 <div align="center">
-
-**EcoSphere ESG Platform v2.0**
-
 Built with 🌍 for a sustainable future
-
-[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger%20UI-009688?style=flat-square&logo=fastapi)](http://localhost:8000/docs)
-[![Frontend](https://img.shields.io/badge/App-localhost%3A5173-61DAFB?style=flat-square&logo=react)](http://localhost:5173)
-
 </div>
