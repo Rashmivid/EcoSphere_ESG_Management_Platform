@@ -60,6 +60,12 @@ def root():
         "docs": "/docs",
         "status": "ok",
     }
+import subprocess
+
+@app.get("/dev-seed-now")
+def dev_seed_now():
+    result = subprocess.run(["python", "seed.py"], capture_output=True, text=True)
+    return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}    
 
 
 @app.get("/health")
