@@ -9,10 +9,13 @@ from app.services.scoring_service import flag_overdue_compliance_issues
 
 from app.routers import auth, org, environmental, social, governance, gamification, scoring, reports, notifications
 
-Base.metadata.create_all(bind=engine)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Tables ready.")
+    except Exception as e:
+        print(f"TABLE CREATE FAILED: {e}")
     # Auto-flag overdue compliance issues on startup
     db = SessionLocal()
     try:
