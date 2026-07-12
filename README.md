@@ -19,8 +19,8 @@ A full-stack ESG (Environmental · Social · Governance) management platform wit
 
 <br/>
 
-> 🚀 **Live API Docs (Swagger)** → [`http://localhost:8000/docs`](http://localhost:8000/docs)
-> 🖥️ **Frontend App** → [`http://localhost:5173`](http://localhost:5173)
+> 🚀 **Live API Docs (Swagger)** → [`https://ecosphere-backend-69gm.onrender.com/docs`]((https://ecosphere-backend-69gm.onrender.com/docs))
+> 🖥️ **Frontend App** → [`https://ecosphere-esg-management-platform-0dev.onrender.com`](https://ecosphere-esg-management-platform-0dev.onrender.com)
 **Live Demo:** [Click here to watch](https://drive.google.com/file/d/1kIYUQJ4WbVF6-HM3zy1tjnwn6JojkwD6/view?usp=sharing)
 
 </div>
