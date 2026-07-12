@@ -21,7 +21,7 @@ A full-stack ESG (Environmental · Social · Governance) management platform wit
 
 > 🚀 **Live API Docs (Swagger)** → [`http://localhost:8000/docs`](http://localhost:8000/docs)
 > 🖥️ **Frontend App** → [`http://localhost:5173`](http://localhost:5173)
-> ❤️ **Demo** → [`https://drive.google.com/file/d/1kIYUQJ4WbVF6-HM3zy1tjnwn6JojkwD6/view?usp=sharing)
+**Live Demo:** [Click here to watch](https://drive.google.com/file/d/1kIYUQJ4WbVF6-HM3zy1tjnwn6JojkwD6/view?usp=sharing)
 
 </div>
 
