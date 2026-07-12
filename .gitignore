@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+.env
+*.db
+backend/ecosphere.db
+
+# Large dump files
+backend_dump.txt
+code_dump.txt
+
+# Node
+node_modules/
+dist/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
+const PARTICLES = Array.from({ length: 28 }, (_, i) => ({
+  id: i,
+  top:     `${Math.random() * 100}%`,
+  left:    `${Math.random() * 100}%`,
+  size:    Math.random() * 4 + 1.5,
+  dur:     `${Math.random() * 5 + 3}s`,
+  opacity: Math.random() * 0.3 + 0.08,
+  delay:   `${Math.random() * 5}s`,
+  color:   ["#06b6d4","#6366f1","#d97706","#16a34a"][Math.floor(Math.random()*4)],
+}));
 
 export default function Signup() {
   const { signup } = useAuth();
@@ -8,6 +19,12 @@ export default function Signup() {
   const [form, setForm] = useState({ email: "", full_name: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scanLine, setScanLine] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setScanLine(p => (p + 1) % 100), 30);
+    return () => clearInterval(t);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,51 +41,141 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-eco-50">
-      <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-eco-900 mb-1">🌍 Join EcoSphere</h1>
-        <p className="text-sm text-gray-500 mb-6">New accounts are created as Employee.</p>
-        {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg p-2 mb-4">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #e0f2fe 0%, #f0f4ff 40%, #faf5ff 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "'Inter', sans-serif",
+      position: "relative", overflow: "hidden",
+    }}>
+      {/* Particles */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none" }}>
+        {PARTICLES.map(p => (
+          <div key={p.id} className="star" style={{
+            top: p.top, left: p.left,
+            width: p.size, height: p.size,
+            background: p.color,
+            "--dur": p.dur, "--opacity": p.opacity,
+            animationDelay: p.delay,
+          }} />
+        ))}
+      </div>
+
+      {/* Grid */}
+      <div style={{
+        position: "fixed", inset: 0, pointerEvents: "none",
+        backgroundImage: "linear-gradient(rgba(99,102,241,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.05) 1px,transparent 1px)",
+        backgroundSize: "40px 40px",
+      }} />
+
+      {/* Scan line */}
+      <div style={{
+        position: "fixed", left: 0, right: 0,
+        top: `${scanLine}%`, height: "2px",
+        background: "linear-gradient(90deg,transparent,rgba(6,182,212,0.2),transparent)",
+        pointerEvents: "none",
+        transition: "top 0.03s linear",
+      }} />
+
+      {/* Card */}
+      <div style={{
+        position: "relative", zIndex: 10,
+        width: "100%", maxWidth: 420,
+        padding: "2rem",
+        background: "rgba(255,255,255,0.9)",
+        backdropFilter: "blur(24px)",
+        border: "1px solid rgba(6,182,212,0.2)",
+        borderRadius: 18,
+        boxShadow: "0 8px 40px rgba(99,102,241,0.12), 0 2px 12px rgba(6,182,212,0.1), inset 0 1px 0 rgba(255,255,255,0.9)",
+        animation: "fadeUp 0.6s ease-out",
+      }}>
+        {/* Corner brackets */}
+        {[
+          {top:0,left:0,borderTop:"2px solid #06b6d4",borderLeft:"2px solid #06b6d4",borderRadius:"6px 0 0 0"},
+          {top:0,right:0,borderTop:"2px solid #06b6d4",borderRight:"2px solid #06b6d4",borderRadius:"0 6px 0 0"},
+          {bottom:0,left:0,borderBottom:"2px solid #06b6d4",borderLeft:"2px solid #06b6d4",borderRadius:"0 0 0 6px"},
+          {bottom:0,right:0,borderBottom:"2px solid #06b6d4",borderRight:"2px solid #06b6d4",borderRadius:"0 0 6px 0"},
+        ].map((s,i)=>(
+          <div key={i} style={{ position:"absolute",width:20,height:20,...s }}/>
+        ))}
+
+        {/* Logo */}
+        <div style={{ textAlign:"center", marginBottom:"1.75rem" }}>
+          <div className="animate-float" style={{ fontSize:"3rem", display:"block", marginBottom:"0.5rem" }}>🌍</div>
+          <div style={{
+            fontFamily:"'Orbitron',sans-serif", fontSize:"1.5rem", fontWeight:900,
+            background:"linear-gradient(135deg,#06b6d4,#6366f1)",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
+            letterSpacing:"0.08em",
+          }}>JOIN ECOSPHERE</div>
+          <div style={{ fontSize:"0.6rem", color:"var(--text-muted)", letterSpacing:"0.2em", fontFamily:"'Orbitron',sans-serif", marginTop:4 }}>
+            NEW ACCOUNTS ENROLLED AS EMPLOYEE
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.25)",
+            color:"#dc2626", padding:"0.6rem 0.75rem", borderRadius:8, marginBottom:"1rem",
+            fontSize:"0.8rem", display:"flex", alignItems:"center", gap:8,
+          }}>
+            ⚠ {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
           <div>
-            <label className="text-sm font-medium text-gray-700">Full name</label>
+            <label style={{ fontSize:"0.6rem", color:"#0891b2", fontFamily:"'Orbitron',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6, fontWeight:700 }}>
+              ▶ Full Name
+            </label>
             <input
+              type="text"
               value={form.full_name}
               onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-eco-500"
+              className="game-input"
               required
+              placeholder="Your full name"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Email</label>
+            <label style={{ fontSize:"0.6rem", color:"#0891b2", fontFamily:"'Orbitron',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6, fontWeight:700 }}>
+              ▶ Email Address
+            </label>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-eco-500"
+              className="game-input"
               required
+              placeholder="name@company.io"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Password</label>
+            <label style={{ fontSize:"0.6rem", color:"#0891b2", fontFamily:"'Orbitron',sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6, fontWeight:700 }}>
+              ▶ Password
+            </label>
             <input
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-eco-500"
+              className="game-input"
               required
+              placeholder="••••••••"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-eco-600 hover:bg-eco-700 text-white rounded-lg py-2 text-sm font-semibold transition disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Sign up"}
+
+          <button type="submit" disabled={loading} className="game-btn"
+            style={{ width:"100%", padding:"0.75rem", marginTop:"0.25rem", fontSize:"0.8rem", opacity:loading?0.6:1 }}>
+            {loading ? "◌ CREATING ACCOUNT..." : "⚡ REGISTER"}
           </button>
         </form>
-        <p className="text-sm text-gray-500 mt-4">
-          Already have an account? <Link to="/login" className="text-eco-600 font-medium">Log in</Link>
+
+        <p style={{ textAlign:"center", marginTop:"1.25rem", fontSize:"0.75rem", color:"var(--text-muted)" }}>
+          Already have an account?{" "}
+          <Link to="/login" style={{ color:"#0891b2", fontWeight:600, textDecoration:"none" }}>
+            Log in →
+          </Link>
         </p>
       </div>
     </div>

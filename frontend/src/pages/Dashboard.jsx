@@ -1,232 +1,346 @@
 import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis } from "recharts";
 import api from "../api/client";
 import Layout from "../components/Layout";
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 
-const PILLAR_COLORS = ["#00ffe0", "#a855f7", "#ffd700"];
-
-function AnimatedCounter({ value, duration = 1500 }) {
-  const [display, setDisplay] = useState(0);
+/* ── Animated counter ── */
+function useCounter(target, duration = 1400) {
+  const [val, setVal] = useState(0);
   useEffect(() => {
     const start = Date.now();
-    const end = parseFloat(value) || 0;
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(eased * end * 10) / 10);
-      if (progress >= 1) clearInterval(timer);
+    const end = typeof target === "number" ? target : 0;
+    const t = setInterval(() => {
+      const p = Math.min((Date.now() - start) / duration, 1);
+      setVal(Math.round((1 - Math.pow(1 - p, 3)) * end));
+      if (p >= 1) clearInterval(t);
     }, 16);
-    return () => clearInterval(timer);
-  }, [value, duration]);
-  return <span>{display}</span>;
+    return () => clearInterval(t);
+  }, [target, duration]);
+  return val;
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
+function StatCard({ label, value, icon, color, sub }) {
+  const animated = useCounter(typeof value === "number" ? value : 0);
   return (
-    <div style={{ background: "rgba(10,14,26,0.95)", border: "1px solid rgba(0,255,224,0.3)", borderRadius: 8, padding: "0.5rem 0.75rem" }}>
-      {label && <div style={{ color: "#00ffe0", fontSize: "0.7rem", fontFamily: "'Orbitron',sans-serif", marginBottom: 4 }}>{label}</div>}
-      {payload.map((p, i) => (
-        <div key={i} style={{ fontSize: "0.8rem", color: p.color || "#e2e8f0" }}>{p.name}: <b>{typeof p.value === "number" ? p.value.toFixed(1) : p.value}</b></div>
-      ))}
+    <div className="stat-card" style={{ borderLeft: `3px solid ${color}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontFamily: "'Orbitron',sans-serif", letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}</div>
+        <div style={{ fontSize: "1.4rem" }}>{icon}</div>
+      </div>
+      <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "2rem", fontWeight: 900, color, marginBottom: 4 }}>
+        {typeof value === "number" ? animated : value}
+      </div>
+      {sub && <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{sub}</div>}
     </div>
   );
-};
+}
+
+const PIE_COLORS = ["#16a34a", "#2563eb", "#d97706", "#7c3aed", "#0891b2"];
 
 export default function Dashboard() {
-  const [overall, setOverall] = useState(null);
-  const [departments, setDepartments] = useState([]);
-  const [govDash, setGovDash] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [recalcing, setRecalcing] = useState(false);
-  const [flashScore, setFlashScore] = useState(false);
+  const [esgData, setEsgData]       = useState(null);
+  const [deptScores, setDeptScores] = useState([]);
+  const [transactions, setTx]       = useState([]);
+  const [activities, setActs]       = useState([]);
+  const [issues, setIssues]         = useState([]);
+  const [challenges, setChallenges] = useState([]);
+  const [departments, setDepts]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
 
   useEffect(() => {
-    (async () => {
+    const load = async () => {
       try {
-        const [overallRes, deptRes, govRes] = await Promise.all([
+        // Fetch data from all modules for a comprehensive dashboard
+        const results = await Promise.allSettled([
           api.get("/scoring/overall"),
+          api.get("/environmental/carbon-transactions"),
+          api.get("/social/activities"),
+          api.get("/governance/compliance-issues"),
+          api.get("/gamification/challenges", { params: { status: "active" } }),
           api.get("/org/departments"),
-          api.get("/governance/dashboard"),
         ]);
-        setOverall(overallRes.data);
-        setDepartments(deptRes.data);
-        setGovDash(govRes.data);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    })();
+
+        // Extract results safely
+        if (results[0].status === "fulfilled") {
+          setEsgData(results[0].value.data);
+          setDeptScores(results[0].value.data.department_scores || []);
+        }
+        if (results[1].status === "fulfilled") setTx(results[1].value.data || []);
+        if (results[2].status === "fulfilled") setActs(results[2].value.data || []);
+        if (results[3].status === "fulfilled") setIssues(results[3].value.data || []);
+        if (results[4].status === "fulfilled") setChallenges(results[4].value.data || []);
+        if (results[5].status === "fulfilled") setDepts(results[5].value.data || []);
+      } catch (e) {
+        console.error("Dashboard load error:", e);
+        setError("Some data could not be loaded.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
-  const recalc = async () => {
-    setRecalcing(true);
-    await api.post("/scoring/recalculate");
-    const res = await api.get("/scoring/overall");
-    setOverall(res.data);
-    setFlashScore(true);
-    setTimeout(() => setFlashScore(false), 1000);
-    setRecalcing(false);
-  };
+  const overall    = esgData?.overall_score ?? 0;
+  const totalCO2   = transactions.reduce((s, t) => s + (t.calculated_co2 || 0), 0);
+  const openIssues = issues.filter(i => i.status === "open" || i.status === "in_progress").length;
+  const deptName   = (id) => departments.find(d => d.id === id)?.name || `Dept #${id}`;
 
-  const deptMap = Object.fromEntries(departments.map(d => [d.id, d.name]));
+  // Chart data
+  const radarData = deptScores.slice(0, 6).map(d => ({
+    dept: deptName(d.department_id),
+    Environmental: d.environmental_score,
+    Social: d.social_score,
+    Governance: d.governance_score,
+  }));
 
-  const pillarData = overall ? [
-    { name: "Environmental", value: overall.department_scores.reduce((a, s) => a + s.environmental_score, 0) / (overall.department_scores.length || 1) },
-    { name: "Social",        value: overall.department_scores.reduce((a, s) => a + s.social_score, 0)        / (overall.department_scores.length || 1) },
-    { name: "Governance",    value: overall.department_scores.reduce((a, s) => a + s.governance_score, 0)    / (overall.department_scores.length || 1) },
-  ] : [];
+  const barData = deptScores.map(d => ({
+    name: deptName(d.department_id),
+    E: d.environmental_score,
+    S: d.social_score,
+    G: d.governance_score,
+    Total: d.total_score,
+  }));
 
-  const barData = overall ? overall.department_scores.map(s => ({
-    name: deptMap[s.department_id] || `Dept ${s.department_id}`,
-    Environmental: +s.environmental_score.toFixed(1),
-    Social:        +s.social_score.toFixed(1),
-    Governance:    +s.governance_score.toFixed(1),
-  })) : [];
+  // Pie chart - ESG weight split based on average scores
+  const avgE = deptScores.length ? Math.round(deptScores.reduce((a, d) => a + d.environmental_score, 0) / deptScores.length) : 0;
+  const avgS = deptScores.length ? Math.round(deptScores.reduce((a, d) => a + d.social_score, 0) / deptScores.length) : 0;
+  const avgG = deptScores.length ? Math.round(deptScores.reduce((a, d) => a + d.governance_score, 0) / deptScores.length) : 0;
 
-  const radarData = pillarData.map(p => ({ subject: p.name, value: +p.value.toFixed(1), fullMark: 100 }));
+  const pieData = [
+    { name: "Environmental", value: avgE || 1 },
+    { name: "Social", value: avgS || 1 },
+    { name: "Governance", value: avgG || 1 },
+  ];
 
-  const stats = [
-    { label: "ESG Score",          value: overall?.overall_score ?? "—", color: "#00ffe0", icon: "⬡", shadow: "rgba(0,255,224,0.3)", sub: `Period: ${overall?.period ?? "—"}` },
-    { label: "Open Issues",        value: govDash?.open_issues ?? 0,      color: "#f97316", icon: "⚠",  shadow: "rgba(249,115,22,0.3)", sub: "Compliance" },
-    { label: "Overdue Issues",     value: govDash?.overdue_issues ?? 0,   color: "#ef4444", icon: "🔴", shadow: "rgba(239,68,68,0.3)",  sub: "Needs action" },
-    { label: "Departments",        value: departments.length,             color: "#a855f7", icon: "🏛",  shadow: "rgba(168,85,247,0.3)", sub: "Tracked units" },
+  const STATS = [
+    { label: "Overall ESG Score", value: overall,              icon: "⬡",  color: "#0891b2", sub: `Period: ${esgData?.period ?? "—"}` },
+    { label: "Departments",       value: departments.length,   icon: "🏛",  color: "#6366f1", sub: "Tracked units" },
+    { label: "Carbon CO₂ (kg)",   value: Math.round(totalCO2), icon: "🌍",  color: "#16a34a", sub: `${transactions.length} transactions` },
+    { label: "CSR Activities",    value: activities.length,    icon: "🤝",  color: "#2563eb", sub: "Active missions" },
+    { label: "Compliance Issues", value: openIssues,           icon: "⚠",  color: "#d97706", sub: `${issues.length} total` },
+    { label: "Active Challenges", value: challenges.length,    icon: "⚔",  color: "#7c3aed", sub: "Gamification quests" },
   ];
 
   return (
     <Layout>
       <div className="page-enter">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "0.65rem", color: "rgba(0,255,224,0.5)", letterSpacing: "0.2em", marginBottom: 4 }}>
-              ▶ COMMAND CENTER
-            </div>
-            <h1 style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "1.5rem", fontWeight: 900, color: "#fff", margin: 0 }}>
-              Organization <span style={{ color: "#00ffe0", textShadow: "0 0 15px rgba(0,255,224,0.6)" }}>Dashboard</span>
-            </h1>
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "0.6rem", color: "#0891b2", letterSpacing: "0.2em", marginBottom: 4, fontWeight: 700 }}>
+            ▶ COMMAND CENTER
           </div>
-          <button onClick={recalc} disabled={recalcing} className="game-btn" style={{ padding: "0.6rem 1.25rem" }}>
-            {recalcing ? "◌ COMPUTING..." : "⚡ RECALCULATE"}
-          </button>
+          <h1 style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "1.6rem", fontWeight: 900, color: "var(--text-primary)", margin: 0 }}>
+            ESG <span style={{ background: "linear-gradient(135deg,#06b6d4,#6366f1)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Dashboard</span>
+          </h1>
         </div>
 
         {loading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300 }}>
-            <div style={{ fontFamily: "'Orbitron',sans-serif", color: "#00ffe0", fontSize: "0.9rem", letterSpacing: "0.15em" }}>
-              ◌ LOADING INTEL...
-            </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400, flexDirection: "column", gap: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(6,182,212,0.2)", borderTop: "3px solid #06b6d4", animation: "spin 1s linear infinite" }} />
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "0.75rem", color: "var(--text-muted)", letterSpacing: "0.15em" }}>LOADING DASHBOARD...</div>
           </div>
         ) : (
           <>
-            {/* Stat Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "2rem" }}>
-              {stats.map((s, i) => (
-                <div key={i} className="stat-card" style={{
-                  animationDelay: `${i * 0.1}s`,
-                  borderColor: `rgba(${s.color === "#00ffe0" ? "0,255,224" : s.color === "#f97316" ? "249,115,22" : s.color === "#ef4444" ? "239,68,68" : "168,85,247"},0.2)`,
-                  transition: "all 0.3s",
-                  ...(flashScore && i === 0 ? { boxShadow: "0 0 30px rgba(0,255,224,0.6)" } : {}),
-                }}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>{s.icon}</div>
-                  <div style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", fontFamily: "'Orbitron',sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>
-                    {s.label}
-                  </div>
-                  <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "2rem", fontWeight: 900, color: s.color, textShadow: `0 0 15px ${s.shadow}`, lineHeight: 1 }}>
-                    <AnimatedCounter value={s.value} />
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", marginTop: 4 }}>{s.sub}</div>
-                </div>
-              ))}
+            {/* Stat cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: "1rem", marginBottom: "2rem" }}>
+              {STATS.map((s, i) => <StatCard key={i} {...s} />)}
             </div>
 
             {/* Charts row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
-              {/* Pie chart */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
+
+              {/* Radar Chart */}
               <div className="game-panel" style={{ padding: "1.5rem" }}>
-                <div className="section-title">Pillar Breakdown</div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={pillarData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={4}>
-                      {pillarData.map((_, i) => (
-                        <Cell key={i} fill={PILLAR_COLORS[i % PILLAR_COLORS.length]} opacity={0.9} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ display: "flex", justifyContent: "center", gap: 16, flexWrap: "wrap" }}>
-                  {pillarData.map((p, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.7rem", color: "rgba(255,255,255,0.6)" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: PILLAR_COLORS[i] }} />
-                      {p.name}
+                <div className="section-title" style={{ color: "#0891b2" }}>
+                  <span>📡</span> ESG Radar — Department Performance
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(6,182,212,0.3),transparent)" }} />
+                </div>
+                {radarData.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontFamily: "'Orbitron',sans-serif", fontSize: "0.7rem" }}>
+                    NO SCORES YET — Go to Admin → Recompute Scores
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid stroke="rgba(99,102,241,0.15)" />
+                      <PolarAngleAxis dataKey="dept" tick={{ fill: "#475569", fontSize: 11, fontWeight: 500 }} />
+                      <Radar name="Environmental" dataKey="Environmental" stroke="#16a34a" fill="#16a34a" fillOpacity={0.2} strokeWidth={2} />
+                      <Radar name="Social" dataKey="Social" stroke="#2563eb" fill="#2563eb" fillOpacity={0.2} strokeWidth={2} />
+                      <Radar name="Governance" dataKey="Governance" stroke="#d97706" fill="#d97706" fillOpacity={0.2} strokeWidth={2} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              {/* Bar Chart */}
+              <div className="game-panel" style={{ padding: "1.5rem" }}>
+                <div className="section-title" style={{ color: "#6366f1" }}>
+                  <span>📊</span> Department Score Breakdown
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(99,102,241,0.3),transparent)" }} />
+                </div>
+                {barData.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)", fontFamily: "'Orbitron',sans-serif", fontSize: "0.7rem" }}>
+                    NO SCORES YET
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={barData} barSize={14}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,102,241,0.08)" />
+                      <XAxis dataKey="name" tick={{ fill: "#475569", fontSize: 11 }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{ background: "rgba(255,255,255,0.97)", border: "1px solid rgba(6,182,212,0.2)", borderRadius: 10, color: "#0f172a", boxShadow: "0 4px 16px rgba(99,102,241,0.1)" }}
+                        cursor={{ fill: "rgba(6,182,212,0.05)" }}
+                      />
+                      <Bar dataKey="E" name="Environmental" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="S" name="Social" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="G" name="Governance" fill="#d97706" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Second row: Pie + Quick Summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
+
+              {/* Pie Chart */}
+              <div className="game-panel" style={{ padding: "1.5rem" }}>
+                <div className="section-title" style={{ color: "#16a34a" }}>
+                  <span>🧩</span> ESG Score Distribution
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(22,163,74,0.3),transparent)" }} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+                  <ResponsiveContainer width="55%" height={200}>
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                        {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ background: "rgba(255,255,255,0.97)", border: "1px solid rgba(6,182,212,0.2)", borderRadius: 10, color: "#0f172a", boxShadow: "0 4px 16px rgba(99,102,241,0.1)" }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {[
+                      { label: "Environmental", value: avgE, color: "#16a34a", icon: "🌿" },
+                      { label: "Social", value: avgS, color: "#2563eb", icon: "🤝" },
+                      { label: "Governance", value: avgG, color: "#d97706", icon: "⚖️" },
+                    ].map(s => (
+                      <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{s.icon} {s.label}</div>
+                          <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: "0.9rem", fontWeight: 700, color: s.color }}>{s.value}/100</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Activity Feed */}
+              <div className="game-panel" style={{ padding: "1.5rem" }}>
+                <div className="section-title" style={{ color: "#7c3aed" }}>
+                  <span>⚡</span> Quick Summary
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(124,58,237,0.3),transparent)" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                  {[
+                    { icon: "🌍", text: `${transactions.length} carbon transactions logged`, color: "#16a34a" },
+                    { icon: "🤝", text: `${activities.length} CSR activities available`, color: "#2563eb" },
+                    { icon: "⚠", text: `${openIssues} open compliance issues`, color: openIssues > 0 ? "#dc2626" : "#16a34a" },
+                    { icon: "⚔", text: `${challenges.length} active sustainability challenges`, color: "#7c3aed" },
+                    { icon: "🏛", text: `${departments.length} departments tracked`, color: "#6366f1" },
+                    { icon: "📊", text: `Overall ESG Score: ${overall}`, color: "#0891b2" },
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "0.6rem 0.85rem", borderRadius: 10,
+                      background: `${item.color}08`,
+                      border: `1px solid ${item.color}18`,
+                      transition: "all 0.2s",
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = `${item.color}12`; e.currentTarget.style.transform = "translateX(4px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = `${item.color}08`; e.currentTarget.style.transform = "translateX(0)"; }}
+                    >
+                      <span style={{ fontSize: "1rem" }}>{item.icon}</span>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-primary)", fontWeight: 500 }}>{item.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
-
-              {/* Radar chart */}
-              <div className="game-panel" style={{ padding: "1.5rem" }}>
-                <div className="section-title">ESG Radar</div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="rgba(0,255,224,0.15)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10, fontFamily: "Orbitron" }} />
-                    <Radar name="Score" dataKey="value" stroke="#00ffe0" fill="#00ffe0" fillOpacity={0.15} strokeWidth={2} />
-                    <Tooltip content={<CustomTooltip />} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Bar chart */}
-              <div className="game-panel" style={{ padding: "1.5rem" }}>
-                <div className="section-title">Department Battle</div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={barData} barSize={6}>
-                    <XAxis dataKey="name" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 9 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 10, color: "rgba(255,255,255,0.5)" }} />
-                    <Bar dataKey="Environmental" fill="#00ffe0" radius={[4,4,0,0]} />
-                    <Bar dataKey="Social"        fill="#a855f7" radius={[4,4,0,0]} />
-                    <Bar dataKey="Governance"    fill="#ffd700" radius={[4,4,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
             </div>
 
-            {/* Department scores table */}
-            {overall?.department_scores?.length > 0 && (
+            {/* Department table */}
+            {deptScores.length > 0 && (
               <div className="game-panel" style={{ padding: "1.5rem" }}>
-                <div className="section-title">Department Scoreboard</div>
+                <div className="section-title" style={{ color: "#0891b2" }}>
+                  <span>🏛</span> Department ESG Breakdown
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(8,145,178,0.3),transparent)" }} />
+                </div>
                 <table className="game-table">
                   <thead>
                     <tr>
                       <th>Department</th>
-                      <th>Environmental</th>
-                      <th>Social</th>
-                      <th>Governance</th>
-                      <th>Total</th>
-                      <th>Rank</th>
+                      <th>🌿 Environmental</th>
+                      <th>🤝 Social</th>
+                      <th>⚖️ Governance</th>
+                      <th>Total Score</th>
+                      <th>Grade</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...overall.department_scores]
-                      .sort((a, b) => (b.environmental_score + b.social_score + b.governance_score) - (a.environmental_score + a.social_score + a.governance_score))
-                      .map((s, idx) => {
-                        const total = ((s.environmental_score + s.social_score + s.governance_score) / 3).toFixed(1);
-                        return (
-                          <tr key={s.department_id}>
-                            <td style={{ color: "#fff", fontWeight: 600 }}>{deptMap[s.department_id] || `Dept ${s.department_id}`}</td>
-                            <td><span style={{ color: "#00ffe0" }}>{s.environmental_score.toFixed(1)}</span></td>
-                            <td><span style={{ color: "#a855f7" }}>{s.social_score.toFixed(1)}</span></td>
-                            <td><span style={{ color: "#ffd700" }}>{s.governance_score.toFixed(1)}</span></td>
-                            <td style={{ fontWeight: 700, color: "#fff" }}>{total}</td>
-                            <td className={`rank-${idx + 1}`} style={{ fontFamily: "'Orbitron',sans-serif", fontWeight: 900 }}>
-                              {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
-                            </td>
-                          </tr>
-                        );
+                    {deptScores.map(d => {
+                      const t = d.total_score;
+                      const grade = t >= 80 ? "A" : t >= 60 ? "B" : t >= 40 ? "C" : "D";
+                      const gradeColor = t >= 80 ? "#16a34a" : t >= 60 ? "#2563eb" : t >= 40 ? "#d97706" : "#dc2626";
+                      return (
+                        <tr key={d.id}>
+                          <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{deptName(d.department_id)}</td>
+                          <td><span style={{ color: "#16a34a", fontWeight: 600 }}>{d.environmental_score}</span></td>
+                          <td><span style={{ color: "#2563eb", fontWeight: 600 }}>{d.social_score}</span></td>
+                          <td><span style={{ color: "#d97706", fontWeight: 600 }}>{d.governance_score}</span></td>
+                          <td style={{ fontFamily: "'Orbitron',sans-serif", color: "#0891b2", fontWeight: 700 }}>{d.total_score}</td>
+                          <td>
+                            <span className="game-badge" style={{
+                              background: `${gradeColor}12`,
+                              border: `1px solid ${gradeColor}35`,
+                              color: gradeColor,
+                              fontWeight: 900, fontSize: "0.75rem",
+                            }}>
+                              {grade}
+                            </span>
+                          </td>
+                        </tr>
+                      );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Recent carbon transactions */}
+            {transactions.length > 0 && (
+              <div className="game-panel" style={{ padding: "1.5rem", marginTop: "1.5rem" }}>
+                <div className="section-title" style={{ color: "#16a34a" }}>
+                  <span>🌿</span> Recent Carbon Transactions
+                  <span style={{ flex: 1, height: 1, background: "linear-gradient(90deg,rgba(22,163,74,0.3),transparent)" }} />
+                </div>
+                <table className="game-table">
+                  <thead>
+                    <tr><th>Department</th><th>Source</th><th>CO₂ (kg)</th><th>Date</th></tr>
+                  </thead>
+                  <tbody>
+                    {transactions.slice(0, 5).map(t => (
+                      <tr key={t.id}>
+                        <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{deptName(t.department_id)}</td>
+                        <td style={{ color: "var(--text-secondary)" }}>{t.source_type}</td>
+                        <td style={{ fontFamily: "'Orbitron',sans-serif", color: "#16a34a", fontWeight: 700 }}>{(t.calculated_co2 || 0).toFixed(2)}</td>
+                        <td style={{ color: "var(--text-muted)" }}>{t.date}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
