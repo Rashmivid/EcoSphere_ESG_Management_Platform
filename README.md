@@ -637,5 +637,4 @@ Admin enables "Auto Emission Calculation" in Environmental Settings
 ---
 
 <div align="center">
-Built with 🌍 for a sustainable future
 </div>
